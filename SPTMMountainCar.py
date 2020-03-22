@@ -169,7 +169,7 @@ class SPTMMountainCar(object):
     def dream_forward(self, dream_env):
         trg_render = True
 
-        rollout = self.predict_rollout_head(3, dream_env)
+        rollout = self.predict_rollout_head(2, dream_env)
 
         def get_jump_candidates(r, g):
             jump_candidates = {}
@@ -183,7 +183,7 @@ class SPTMMountainCar(object):
                         current_pose_rollout = rollout.nodes[r_node]["position"]
                         # print(current_pose_graph, current_pose_rollout)
                         try:
-                            if bool(np.allclose(current_pose_graph[0], current_pose_rollout[0], 0.01) and np.allclose(current_pose_graph[1], current_pose_rollout[1], 0.01)):
+                            if bool(np.allclose(current_pose_graph[0], current_pose_rollout[0], 0.05) and np.allclose(current_pose_graph[1], current_pose_rollout[1], 0.05)):
                                 # print('current_pos_delta', current_pos_delta, 'current_velo_delta', current_velo_delta)
                                 jump_candidates[(r_node, graph_id, graph_node)] = g[graph_id].number_of_nodes() - graph_node
                         except ValueError as e:
@@ -193,9 +193,7 @@ class SPTMMountainCar(object):
 
         # Rollout could be empty when at the goal position. If not then do the following
         if rollout:
-
             jump_candidates = get_jump_candidates(rollout, self.graphs)
-            #jump_candidates = False
 
             # If there is a trajectory to hop on to
             if jump_candidates:
@@ -227,6 +225,7 @@ class SPTMMountainCar(object):
 
                 dream_env.step(new_action)
 
+
                 if trg_render:
                     dream_env.render()
                 current_action_sequence.append(new_action)
@@ -239,7 +238,7 @@ class SPTMMountainCar(object):
                     current_action_sequence = current_trajectory.nodes[current_trajectory.number_of_nodes() - 1]["action_sequence"].copy()
 
                     _, _, done, _ = dream_env.step(action)
-                    #print(done)
+
                     current_action_sequence.append(action)
                     current_trajectory.add_node(current_trajectory.number_of_nodes(), position=dream_env.env.state[0],
                                                 velocity=dream_env.env.state[1], action_sequence=current_action_sequence)
@@ -263,6 +262,12 @@ class SPTMMountainCar(object):
             return nx.DiGraph(), nx.DiGraph(), [], []
 
 
+def print_tree(t):
+    for node in list(t.nodes):
+        if t[node]:
+            print(node, "->", t[node])
+
+
 if __name__ == '__main__':
     mc = SPTMMountainCar("./episodes_keyboard/")
     env = gym.make("MountainCar-v0")
@@ -271,7 +276,7 @@ if __name__ == '__main__':
     dream_env.reset()
 
     # Setting some starting positions for debugging purpose+
-    #dream_env.env.state[0] = np.array([-0.48145347, -0.48145347])
+    dream_env.env.state[0] = np.array([0.47180236, 0.32295259])
     # dream_env.env.state[0] = -0.48145347
     # dream_env.env.state[0] = -0.53145347
     # dream_env.env.state[0] = -0.55145347
@@ -281,105 +286,3 @@ if __name__ == '__main__':
     print(dream_env.state)
 
     current_trajectory, best_trajectory, jump_coords_pos, jump_coords_velo = mc.dream_forward(dream_env)
-    #
-    # current_traj_pos_ = list(nx.get_node_attributes(current_trajectory, "position").values())
-    # current_traj_velo_ = list(nx.get_node_attributes(current_trajectory, "velocity").values())
-    #
-    # current_traj_actions_ = list(nx.get_node_attributes(current_trajectory, "action_sequence").values())[-1]
-    # current_traj_actions_.append(0)
-    #
-    # best_traj_pos_ = list(nx.get_node_attributes(best_trajectory, "position").values())
-    # best_traj_velo_ = list(nx.get_node_attributes(best_trajectory, "velocity").values())
-    #
-    # best_traj_actions_ = list(nx.get_node_attributes(best_trajectory, "action_sequence").values())[-1]
-    #
-    # right_actions_current_traj_pos = []
-    # right_actions_current_traj_velo = []
-    #
-    # left_actions_current_traj_pos = []
-    # left_actions_current_traj_velo = []
-    #
-    # no_actions_current_traj_pos = []
-    # no_actions_current_traj_velo = []
-    #
-    # right_actions_best_traj_pos = []
-    # right_actions_best_traj_velo = []
-    #
-    # left_actions_best_traj_pos = []
-    # left_actions_best_traj_velo = []
-    #
-    # no_actions_best_traj_pos = []
-    # no_actions_best_traj_velo = []
-    #
-    # for index, value in enumerate(current_traj_actions_):
-    #     if value == 2:
-    #         right_actions_current_traj_pos.append(current_traj_pos_[index])
-    #         right_actions_current_traj_velo.append(current_traj_velo_[index])
-    #
-    #     if value == 1:
-    #         left_actions_current_traj_pos.append(current_traj_pos_[index])
-    #         left_actions_current_traj_velo.append(current_traj_velo_[index])
-    #
-    #     if value == 0:
-    #         no_actions_current_traj_pos.append(current_traj_pos_[index])
-    #         no_actions_current_traj_velo.append(current_traj_velo_[index])
-    #
-    # for index, value in enumerate(best_traj_actions_):
-    #     if value == 2:
-    #         right_actions_best_traj_pos.append(best_traj_pos_[index])
-    #         right_actions_best_traj_velo.append(best_traj_velo_[index])
-    #     if value == 1:
-    #         left_actions_best_traj_pos.append(best_traj_pos_[index])
-    #         left_actions_best_traj_velo.append(best_traj_velo_[index])
-    #     if value == 0:
-    #         no_actions_best_traj_pos.append(best_traj_pos_[index])
-    #         no_actions_best_traj_velo.append(best_traj_velo_[index])
-
-    # plt.plot(current_traj_pos_[0], current_traj_velo_[0], linewidth=0, marker="*", markersize=8, color="blue", label="current_trajectory")
-    # plt.plot(right_actions_current_traj_pos,
-    #          right_actions_current_traj_velo, linewidth=0, marker=">", markersize=3, color="blue")
-    #
-    # plt.plot(left_actions_current_traj_pos,
-    #          left_actions_current_traj_velo, linewidth=0, marker="<", markersize=3, color="blue")
-    # plt.plot(no_actions_current_traj_pos,
-    #           no_actions_current_traj_velo, linewidth=0, marker="o", markersize=3, color="blue")
-    #
-    # plt.plot(best_traj_pos_[0], best_traj_velo_[0], linewidth=0, marker="*", markersize=8, color="red", label="best_trajectory")
-    # plt.plot(right_actions_best_traj_pos,
-    #          right_actions_best_traj_velo, linewidth=0, marker=">", markersize=3, color="red")
-    # plt.plot(left_actions_best_traj_pos,
-    #          left_actions_best_traj_velo, linewidth=0, marker="<", markersize=3, color="red")
-    # plt.plot(no_actions_best_traj_pos,
-    #          no_actions_best_traj_velo, linewidth=0, marker="o", markersize=3, color="red")
-    #
-    # # Plotting the trajectory as points
-    # #plt.plot(current_traj_pos_, current_traj_velo_, 'b', label="current-trajectory", markersize=1)
-    # #
-    # #plt.plot(current_traj_pos_, current_traj_velo_, 'r', label="followed-trajectory", markersize=1)
-    #
-    # # Plotting the trajectory with arrows indicating the action absolved of the agent for every observation
-    # U = list(nx.get_node_attributes(current_trajectory, "action_sequence").values())[-1]
-    # actions = []
-    # for x in U:
-    #     if x == 1:
-    #         actions.append(-1.0)
-    #     elif x == 2:
-    #         actions.append(1.0)
-    #     elif x == 0:
-    #         actions.append(0.0)
-    # actions.append(0.0)
-    # V = list(np.zeros(len(nx.get_node_attributes(current_trajectory, "position").values())))
-    #
-    # # plt.quiver(list(nx.get_node_attributes(current_trajectory, "position").values()),
-    # #            list(nx.get_node_attributes(current_trajectory, "velocity").values()), actions, V)
-    #
-    # # plt.plot(list(nx.get_node_attributes(current_trajectory, "position").values()), list(nx.get_node_attributes(current_trajectory, "velocity").values())
-    # #          )
-    #
-    # # Plotting the 2 nodes which correspond to the coordinates where the dreamed rollout was closest to a chosen recorded trajectory
-    # plt.plot(jump_coords_pos, jump_coords_velo, 'yo', markersize=5, label="jumping coordinates")
-    #
-    # plt.xlabel("Position")
-    # plt.ylabel("Velocity")
-    # plt.legend()
-    # plt.show()
