@@ -1,0 +1,7 @@
+numpy
+pandas
+sklearn
+pynput
+matplotlib
+networkx
+gym
