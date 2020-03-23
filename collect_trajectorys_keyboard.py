@@ -25,9 +25,7 @@ class PlayMountainCar(object):
         self.obs_list = []
         self.observation = []
 
-
     def on_press(self, key):
-
         try:
             k = key.char  # single-char keys
 
@@ -59,7 +57,6 @@ class PlayMountainCar(object):
             self.env.render()
 
     def play_and_collect(self):
-
         self.observation = self.env.reset()
         print("Pre-recording Movements")
 
