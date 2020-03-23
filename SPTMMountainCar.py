@@ -13,7 +13,7 @@ from pynput import keyboard
 import gym
 import time
 
-MIN_DIST = 100000000
+MIN = 100000000
 
 
 class SPTMMountainCar(object):
@@ -26,11 +26,8 @@ class SPTMMountainCar(object):
                 df = pickle.load(pickle_file)
                 self.line = [tuple(r) for r in df.to_numpy().tolist()]
 
-
     def predict_rollout_head(self, n, denv):
-
         # We want to return a list of observations which represents the predicted rollout head
-
         def copy_env(environment):
             copy_env = gym.make("MountainCar-v0")
             copy_env.reset()
@@ -47,7 +44,7 @@ class SPTMMountainCar(object):
         current_observation = denv.state
         current_position = current_observation[0]
         current_velocity = current_observation[1]
-        done = bool(np.allclose(current_position, denv.goal_position, 0.05))
+        done = bool(np.allclose(current_position, denv.goal_position, 0.1))
 
         current_parent = (nodes[0], denv)
         next_parents = []
@@ -64,7 +61,7 @@ class SPTMMountainCar(object):
                     denv_.step(action)
                     dream_position = denv_.state[0]
                     dream_velocity = denv_.state[1]
-                    done = bool(np.allclose(dream_position, denv.goal_position, 0.05))
+                    done = bool(np.allclose(dream_position, denv.goal_position, 0.1))
 
                     if not done:
                         next_parents.append((nodes[0], denv_))
@@ -95,45 +92,46 @@ class SPTMMountainCar(object):
 
     def dream_forward(self, dream_env):
         line_to_follow = self.line
-        dream_env.render()
 
         for _ in range(0, 50):
-            rollout = self.predict_rollout_head(3, dream_env)
-
-            min_dist = MIN_DIST
-            min_pair_dist = MIN_DIST
-            min_pair = (MIN_DIST, MIN_DIST)
-            best_point = []
+            rollout = self.predict_rollout_head(5, dream_env)
+            min_dist = MIN
+            min_pair = (MIN, MIN)
+            min_shift = MIN
+            closest_point = []
             best_node = -1
-
             for node in rollout.nodes:
-                position = rollout.nodes[node]['position']
-                min_shift_dist = MIN_DIST
-                for k, v in rollout.succ[node].items():
-                    if not rollout.succ[k]:
-                        k_pos = rollout.nodes[k]['position']
-                        for point in line_to_follow:
-                            dist = np.linalg.norm(position - point[:2])
-                            if dist < min_dist:
-                                min_dist = dist
-                                best_point = point
+                # if it's not a leaf
+                if rollout.succ[node] and node > 1:
+                    position = rollout.nodes[node]['position']
+                    # LOSS-1: get the closest point for this node
+                    for point in line_to_follow:
+                        dist = np.linalg.norm(position - point[:2])
+                        if dist < min_dist:
+                            min_dist = dist
+                            closest_point = point
 
-                        shift_point = best_point[2:]
+                    # LOSS-2: get the (more similar) shift
+                    for k, v in rollout.succ[node].items():
+                        k_pos = rollout.nodes[k]['position']
+                        shift_point = closest_point[2:]
                         shift_node = np.array([position[0] - k_pos[0], position[1] - k_pos[1]])
                         dist_shift = np.linalg.norm(shift_node - shift_point)
-                        if dist_shift < min_pair_dist:
-                            min_pair_dist = dist_shift
+                        if dist_shift < min_shift:
+                            min_shift = dist_shift
 
-                pair = (min_dist, min_shift_dist)
-                if pair < min_pair:
-                    min_pair = pair
-                    best_node = node
+                    # the node that has the min pair is the best node
+                    pair = (min_dist, min_shift)
+                    if pair < min_pair:
+                        min_pair = pair
+                        best_node = node
 
             action_seq = rollout.nodes[best_node]['action_sequence']
             print("ActionSeq:", action_seq)
             next_action = action_seq[0]
             print("NextAction:", next_action)
             dream_env.step(next_action)
+
             dream_env.render()
 
         dream_env.close()
