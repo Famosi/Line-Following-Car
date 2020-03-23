@@ -95,18 +95,39 @@ class SPTMMountainCar(object):
 
     def dream_forward(self, dream_env):
         line_to_follow = self.line
-        for _ in range(0, 20):
+        dream_env.render()
+
+        for _ in range(0, 50):
+            rollout = self.predict_rollout_head(3, dream_env)
+
             min_dist = MIN_DIST
+            min_pair_dist = MIN_DIST
+            min_pair = (MIN_DIST, MIN_DIST)
+            best_point = []
             best_node = -1
-            rollout = self.predict_rollout_head(4, dream_env)
+
             for node in rollout.nodes:
-                if not rollout[node]:
-                    position = rollout.nodes[node]['position']
-                    for point in line_to_follow:
-                        dist = np.linalg.norm(position - point[:2])
-                        if dist < min_dist:
-                            min_dist = dist
-                            best_node = node
+                position = rollout.nodes[node]['position']
+                min_shift_dist = MIN_DIST
+                for k, v in rollout.succ[node].items():
+                    if not rollout.succ[k]:
+                        k_pos = rollout.nodes[k]['position']
+                        for point in line_to_follow:
+                            dist = np.linalg.norm(position - point[:2])
+                            if dist < min_dist:
+                                min_dist = dist
+                                best_point = point
+
+                        shift_point = best_point[2:]
+                        shift_node = np.array([position[0] - k_pos[0], position[1] - k_pos[1]])
+                        dist_shift = np.linalg.norm(shift_node - shift_point)
+                        if dist_shift < min_pair_dist:
+                            min_pair_dist = dist_shift
+
+                pair = (min_dist, min_shift_dist)
+                if pair < min_pair:
+                    min_pair = pair
+                    best_node = node
 
             action_seq = rollout.nodes[best_node]['action_sequence']
             print("ActionSeq:", action_seq)
@@ -114,6 +135,7 @@ class SPTMMountainCar(object):
             print("NextAction:", next_action)
             dream_env.step(next_action)
             dream_env.render()
+
         dream_env.close()
 
 

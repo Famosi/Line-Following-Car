@@ -68,7 +68,7 @@ class PlayMountainCar(object):
                 break
         self.env.close()
 
-        ep = pd.DataFrame(self.ep_list, columns=["position_x", "position_y", "velocity_x", "velocity_y", "action"])
+        ep = pd.DataFrame(self.ep_list, columns=["position_x", "position_y", "shift_x", "shift_y"])
         ep["time"] = range(0, len(self.ep_list))
         print(ep["position_x"].shape[0])
         print(ep["position_x"][0])
