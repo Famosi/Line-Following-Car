@@ -27,9 +27,6 @@ class SPTMMountainCar(object):
                 self.line = [tuple(r) for r in df.to_numpy().tolist()]
 
     def predict_rollout_head(self, n, denv):
-        line_to_follow_x = [x[0] for x in self.line]
-        line_to_follow_y = [y[1] for y in self.line]
-
         rotation = denv.rotation
 
         # We want to return a list of observations which represents the predicted rollout head
@@ -43,7 +40,7 @@ class SPTMMountainCar(object):
 
         m = 0
         for i in range(0, n):
-            m += 3 ** i
+            m += 7 ** i
 
         nodes = list(range(1, m + 1))
 
@@ -61,14 +58,10 @@ class SPTMMountainCar(object):
 
         def __helper__(nodes, current_parent, next_parents, rollout, denv):
             if nodes:
-                for action in [0, 1, 2]:
+                for action in [0, 1, 2, 3, 4, 5, 6]:
                     denv_ = copy_env(denv)
                     denv_.env.rotation = rotation
                     denv_.step(action)
-
-                    # denv_.render()
-                    # time.sleep(1)
-                    # denv.close()
 
                     dream_position = denv_.state[0]
                     dream_velocity = denv_.state[1]
@@ -106,21 +99,20 @@ class SPTMMountainCar(object):
         line_to_follow_x = [x[0] for x in self.line]
         line_to_follow_y = [y[1] for y in self.line]
 
-        for _ in range(0, 30):
-            rollout = self.predict_rollout_head(3, dream_env)
-            tree_x = []
-            tree_y = []
+        for _ in range(0, 50):
+            rollout = self.predict_rollout_head(4, dream_env)
+            # tree_x = []
+            # tree_y = []
             min_dist = MIN
             min_pair = (MIN, MIN)
             min_shift = MIN
             closest_point = []
             best_node = -1
             for node in rollout.nodes:
-                # if it's not a leaf
+                # if it's not a leaf and it's not the root
                 if rollout.succ[node] and node > 1:
                     position = rollout.nodes[node]['position']
-                    tree_x.append(position[0])
-                    tree_y.append(position[1])
+
                     # LOSS-1: get the closest point for this node
                     for point in self.line:
                         dist = np.linalg.norm(position - point[:2])
@@ -143,23 +135,22 @@ class SPTMMountainCar(object):
                         min_pair = pair
                         best_node = node
 
-            best_node_pos = rollout.nodes[best_node]['position']
-
-            plt.scatter(dream_env.state[0][0], dream_env.state[0][1], color='green')
-            plt.scatter(tree_x, tree_y, color='blue')
-            plt.scatter(best_node_pos[0], best_node_pos[1], color='red')
-            plt.plot(line_to_follow_x, line_to_follow_y, color='black')
-            plt.show()
+            # best_node_pos = rollout.nodes[best_node]['position']
+            # line_to_follow_x = [x[0] for x in self.line]
+            # line_to_follow_y = [y[1] for y in self.line]
+            # plt.scatter(dream_env.state[0][0], dream_env.state[0][1], color='green')
+            # plt.scatter(tree_x, tree_y, color='blue')
+            # plt.scatter(best_node_pos[0], best_node_pos[1], color='red')
+            # plt.plot(line_to_follow_x, line_to_follow_y, color='black')
+            # plt.show()
 
             action_seq = rollout.nodes[best_node]['action_sequence']
-            print("ActionSeq:", action_seq)
             next_action = action_seq[0]
-            print("NextAction:", next_action)
 
             dream_env.step(next_action)
-            #dream_env.render()
+            dream_env.render()
 
-        #dream_env.close()
+        dream_env.close()
 
 
 if __name__ == '__main__':
