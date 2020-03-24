@@ -27,11 +27,17 @@ class SPTMMountainCar(object):
                 self.line = [tuple(r) for r in df.to_numpy().tolist()]
 
     def predict_rollout_head(self, n, denv):
+        line_to_follow_x = [x[0] for x in self.line]
+        line_to_follow_y = [y[1] for y in self.line]
+
+        rotation = denv.rotation
+
         # We want to return a list of observations which represents the predicted rollout head
         def copy_env(environment):
             copy_env = gym.make("MountainCar-v0")
             copy_env.reset()
             copy_env.env.state = environment.env.state
+            # copy_env.env.rotation = environment.env.rotation
             # Number of steps done is NOT saved
             return copy_env
 
@@ -54,13 +60,19 @@ class SPTMMountainCar(object):
         nodes.pop(0)
 
         def __helper__(nodes, current_parent, next_parents, rollout, denv):
-
             if nodes:
                 for action in [0, 1, 2]:
                     denv_ = copy_env(denv)
+                    denv_.env.rotation = rotation
                     denv_.step(action)
+
+                    # denv_.render()
+                    # time.sleep(1)
+                    # denv.close()
+
                     dream_position = denv_.state[0]
                     dream_velocity = denv_.state[1]
+
                     done = bool(np.allclose(dream_position, denv.goal_position, 0.1))
 
                     if not done:
@@ -75,13 +87,13 @@ class SPTMMountainCar(object):
                     rollout.add_edge(current_parent[0], nodes[0], action=action)
                     nodes.pop(0)
 
-                current_parent = next_parents.pop(0)
+                if not done:
+                    current_parent = next_parents.pop(0)
 
                 if current_parent:
                     return __helper__(nodes, current_parent, next_parents, rollout, current_parent[1])
                 else:
                     return rollout
-
             else:
                 return rollout
 
@@ -91,10 +103,13 @@ class SPTMMountainCar(object):
         return rollout
 
     def dream_forward(self, dream_env):
-        line_to_follow = self.line
+        line_to_follow_x = [x[0] for x in self.line]
+        line_to_follow_y = [y[1] for y in self.line]
 
-        for _ in range(0, 50):
-            rollout = self.predict_rollout_head(5, dream_env)
+        for _ in range(0, 30):
+            rollout = self.predict_rollout_head(3, dream_env)
+            tree_x = []
+            tree_y = []
             min_dist = MIN
             min_pair = (MIN, MIN)
             min_shift = MIN
@@ -104,8 +119,10 @@ class SPTMMountainCar(object):
                 # if it's not a leaf
                 if rollout.succ[node] and node > 1:
                     position = rollout.nodes[node]['position']
+                    tree_x.append(position[0])
+                    tree_y.append(position[1])
                     # LOSS-1: get the closest point for this node
-                    for point in line_to_follow:
+                    for point in self.line:
                         dist = np.linalg.norm(position - point[:2])
                         if dist < min_dist:
                             min_dist = dist
@@ -121,20 +138,28 @@ class SPTMMountainCar(object):
                             min_shift = dist_shift
 
                     # the node that has the min pair is the best node
-                    pair = (min_dist, min_shift)
+                    pair = (min_shift, min_dist)
                     if pair < min_pair:
                         min_pair = pair
                         best_node = node
+
+            best_node_pos = rollout.nodes[best_node]['position']
+
+            plt.scatter(dream_env.state[0][0], dream_env.state[0][1], color='green')
+            plt.scatter(tree_x, tree_y, color='blue')
+            plt.scatter(best_node_pos[0], best_node_pos[1], color='red')
+            plt.plot(line_to_follow_x, line_to_follow_y, color='black')
+            plt.show()
 
             action_seq = rollout.nodes[best_node]['action_sequence']
             print("ActionSeq:", action_seq)
             next_action = action_seq[0]
             print("NextAction:", next_action)
+
             dream_env.step(next_action)
+            #dream_env.render()
 
-            dream_env.render()
-
-        dream_env.close()
+        #dream_env.close()
 
 
 if __name__ == '__main__':
