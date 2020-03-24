@@ -40,7 +40,7 @@ class SPTMMountainCar(object):
 
         m = 0
         for i in range(0, n):
-            m += 7 ** i
+            m += 5 ** i
 
         nodes = list(range(1, m + 1))
 
@@ -58,7 +58,7 @@ class SPTMMountainCar(object):
 
         def __helper__(nodes, current_parent, next_parents, rollout, denv):
             if nodes:
-                for action in [0, 1, 2, 3, 4, 5, 6]:
+                for action in [0, 1, 2, 3, 4]:
                     denv_ = copy_env(denv)
                     denv_.env.rotation = rotation
                     denv_.step(action)
@@ -160,9 +160,8 @@ if __name__ == '__main__':
     dream_env = gym.make("MountainCar-v0")
     dream_env.reset()
 
-    # Setting some starting positions for debugging purpose+
-    dream_env.env.state[0] = np.array([0.10003285, 0.92225642])
-
-    print("starting position: ", dream_env.state[0])
+    # Setting starting position (debugging)
+    # dream_env.env.state[0] = np.array([0.10003285, 0.92225642])
+    # print("starting position: ", dream_env.state[0])
 
     mc.dream_forward(dream_env)
