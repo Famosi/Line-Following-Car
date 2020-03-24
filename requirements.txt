@@ -5,4 +5,4 @@ pynput
 matplotlib
 networkx
 gym
-tensorflow<=1.14
+tensorflow>=1.15.2
