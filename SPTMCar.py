@@ -14,6 +14,7 @@ import gym
 import time
 
 MIN = 100000000
+STEP = 70
 
 
 class SPTMMountainCar(object):
@@ -96,10 +97,8 @@ class SPTMMountainCar(object):
         return rollout
 
     def dream_forward(self, dream_env):
-        line_to_follow_x = [x[0] for x in self.line]
-        line_to_follow_y = [y[1] for y in self.line]
 
-        for _ in range(0, 50):
+        for _ in range(STEP):
             rollout = self.predict_rollout_head(4, dream_env)
             # tree_x = []
             # tree_y = []
