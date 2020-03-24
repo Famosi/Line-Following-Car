@@ -160,7 +160,7 @@ if __name__ == '__main__':
     dream_env.reset()
 
     # Setting starting position (debugging)
-    # dream_env.env.state[0] = np.array([0.10003285, 0.92225642])
+    dream_env.env.state[0] = np.array([0.10003285, 0.92225642])
     # print("starting position: ", dream_env.state[0])
 
     mc.dream_forward(dream_env)
