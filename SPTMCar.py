@@ -26,6 +26,14 @@ class SPTMMountainCar(object):
             with open(folder + filename, "rb") as pickle_file:
                 df = pickle.load(pickle_file)
                 self.line = [tuple(r) for r in df.to_numpy().tolist()]
+        # xs = []
+        # ys = []
+        # for point in self.line:
+        #     xs.append(point[:1][0])
+        #     ys.append(point[1:3][0])
+        # print(xs)
+        # print(ys)
+        # print(self.line)
 
     def predict_rollout_head(self, n, denv):
         rotation = denv.rotation
@@ -41,7 +49,7 @@ class SPTMMountainCar(object):
 
         m = 0
         for i in range(0, n):
-            m += 5 ** i
+            m += 3 ** i
 
         nodes = list(range(1, m + 1))
 
@@ -59,7 +67,7 @@ class SPTMMountainCar(object):
 
         def __helper__(nodes, current_parent, next_parents, rollout, denv):
             if nodes:
-                for action in [0, 1, 2, 3, 4]:
+                for action in [0, 1, 2]:
                     denv_ = copy_env(denv)
                     denv_.env.rotation = rotation
                     denv_.step(action)
@@ -97,13 +105,13 @@ class SPTMMountainCar(object):
         return rollout
 
     def dream_forward(self, dream_env):
-
+        dream_env.render()
         for _ in range(STEP):
-            rollout = self.predict_rollout_head(4, dream_env)
-            # tree_x = []
-            # tree_y = []
+            rollout = self.predict_rollout_head(6, dream_env)
+            tree_x = []
+            tree_y = []
             min_dist = MIN
-            min_pair = (MIN, MIN)
+            min_pair = MIN
             min_shift = MIN
             closest_point = []
             best_node = -1
@@ -122,6 +130,8 @@ class SPTMMountainCar(object):
                     # LOSS-2: get the (more similar) shift
                     for k, v in rollout.succ[node].items():
                         k_pos = rollout.nodes[k]['position']
+                        tree_x.append(k_pos[0])
+                        tree_y.append(k_pos[1])
                         shift_point = closest_point[2:]
                         shift_node = np.array([position[0] - k_pos[0], position[1] - k_pos[1]])
                         dist_shift = np.linalg.norm(shift_node - shift_point)
@@ -129,7 +139,7 @@ class SPTMMountainCar(object):
                             min_shift = dist_shift
 
                     # the node that has the min pair is the best node
-                    pair = (min_shift, min_dist)
+                    pair = (min_dist + min_shift)
                     if pair < min_pair:
                         min_pair = pair
                         best_node = node
@@ -160,7 +170,7 @@ if __name__ == '__main__':
     dream_env.reset()
 
     # Setting starting position (debugging)
-    dream_env.env.state[0] = np.array([0.10003285, 0.92225642])
+    dream_env.env.state[0] = np.array([0.08078343769427906, 0.8791929653015608])
     # print("starting position: ", dream_env.state[0])
 
     mc.dream_forward(dream_env)

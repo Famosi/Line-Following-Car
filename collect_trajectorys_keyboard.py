@@ -11,6 +11,8 @@ from pynput import keyboard
 # from baselines import deepq
 # from baselines.common import models
 
+MAX_STEP = 70
+
 
 class PlayMountainCar(object):
     """
@@ -21,6 +23,7 @@ class PlayMountainCar(object):
     def __init__(self):
         self.env = gym.make("MountainCar-v0")
         self.done = False
+        self.step = 0
         self.ep_list = []
         self.obs_list = []
         self.observation = []
@@ -31,29 +34,30 @@ class PlayMountainCar(object):
 
         except:
             k = key.name  # other keys
-        if key == keyboard.Key.esc or self.done:
+        if key == keyboard.Key.esc or self.done or self.step > MAX_STEP:
+            self.done = True
             return False  # stop listener
 
         if k == 'left':
             #Push left
             print('Key pressed: ' + k)
-            self.observation, _, self.done, _ = self.env.step(0)
-            obs_act = np.append(self.observation, 0)
-            self.ep_list.append(obs_act)
+            self.observation, _, self.done, _ = self.env.step(1)
+            self.step += 1
+            self.ep_list.append(self.observation[0])
             self.env.render()
         if k == 'up':
             # push straight
             print('Key pressed: ' + k)
-            obs_act = np.append(self.observation, 1)
-            self.ep_list.append(obs_act)
-            self.observation, _, self.done, _ = self.env.step(1)
+            self.observation, _, self.done, _ = self.env.step(0)
+            self.step += 1
+            self.ep_list.append(self.observation[0])
             self.env.render()
         if k == 'right':
             # push right
             print('Key pressed: ' + k)
-            obs_act = np.append(self.observation, 2)
-            self.ep_list.append(obs_act)
             self.observation, _, self.done, _ = self.env.step(2)
+            self.step += 1
+            self.ep_list.append(self.observation[0])
             self.env.render()
 
     def play_and_collect(self):
@@ -68,8 +72,7 @@ class PlayMountainCar(object):
                 break
         self.env.close()
 
-        ep = pd.DataFrame(self.ep_list, columns=["position_x", "position_y", "shift_x", "shift_y"])
-        ep["time"] = range(0, len(self.ep_list))
+        ep = pd.DataFrame(self.ep_list, columns=["position_x", "position_y"])
         print(ep["position_x"].shape[0])
         print(ep["position_x"][0])
         ep.to_pickle("./episodes_keyboard/episode_" + str(np.round(ep["position_x"][0], decimals=3)) + "_" +
