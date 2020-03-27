@@ -56,7 +56,6 @@ class SPTMMountainCar(object):
         current_observation = denv.state
         current_position = current_observation[0]
         current_velocity = current_observation[1]
-        done = bool(np.allclose(current_position, denv.goal_position, 0.1))
 
         current_parent = (nodes[0], denv)
         next_parents = []
@@ -75,10 +74,7 @@ class SPTMMountainCar(object):
                     dream_position = denv_.state[0]
                     dream_velocity = denv_.state[1]
 
-                    done = bool(np.allclose(dream_position, denv.goal_position, 0.1))
-
-                    if not done:
-                        next_parents.append((nodes[0], denv_))
+                    next_parents.append((nodes[0], denv_))
 
                     current_action_sequence = rollout.nodes[current_parent[0]]["action_sequence"].copy()
                     current_action_sequence.append(action)
@@ -89,8 +85,7 @@ class SPTMMountainCar(object):
                     rollout.add_edge(current_parent[0], nodes[0], action=action)
                     nodes.pop(0)
 
-                if not done:
-                    current_parent = next_parents.pop(0)
+                current_parent = next_parents.pop(0)
 
                 if current_parent:
                     return __helper__(nodes, current_parent, next_parents, rollout, current_parent[1])
@@ -99,7 +94,7 @@ class SPTMMountainCar(object):
             else:
                 return rollout
 
-        if not done:
+        if current_parent:
             return __helper__(nodes, current_parent, next_parents, rollout, denv)
 
         return rollout
@@ -107,7 +102,7 @@ class SPTMMountainCar(object):
     def dream_forward(self, dream_env):
         dream_env.render()
         for _ in range(STEP):
-            rollout = self.predict_rollout_head(6, dream_env)
+            rollout = self.predict_rollout_head(5, dream_env)
             tree_x = []
             tree_y = []
             min_dist = MIN
