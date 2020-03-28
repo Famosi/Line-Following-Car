@@ -11,7 +11,7 @@ from pynput import keyboard
 # from baselines import deepq
 # from baselines.common import models
 
-MAX_STEP = 70
+MAX_STEP = 10000
 
 
 class PlayMountainCar(object):
