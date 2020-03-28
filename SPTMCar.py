@@ -14,26 +14,26 @@ import gym
 import time
 
 MIN = 100000000
-STEP = 70
+STEP = 300
 
 
 class SPTMMountainCar(object):
 
-    def __init__(self, folder):
+    def __init__(self, folder, n):
         self.graphs = {}  # saved trajectories
         self.line = []
-        for episode_id, filename in enumerate(os.listdir(folder)):
-            with open(folder + filename, "rb") as pickle_file:
-                df = pickle.load(pickle_file)
-                self.line = [tuple(r) for r in df.to_numpy().tolist()]
-        # xs = []
-        # ys = []
-        # for point in self.line:
-        #     xs.append(point[:1][0])
-        #     ys.append(point[1:3][0])
-        # print(xs)
-        # print(ys)
-        # print(self.line)
+        with open(folder + 'track_' + str(n) + '.pkl', "rb") as pickle_file:
+            df = pickle.load(pickle_file)
+            self.line = [tuple(r) for r in df.to_numpy().tolist()]
+
+        xs = []
+        ys = []
+        for point in self.line:
+            xs.append(point[:1][0])
+            ys.append(point[1:3][0])
+        print(xs)
+        print(ys)
+        print(self.line)
 
     def predict_rollout_head(self, n, denv):
         rotation = denv.rotation
@@ -49,7 +49,7 @@ class SPTMMountainCar(object):
 
         m = 0
         for i in range(0, n):
-            m += 3 ** i
+            m += 7 ** i
 
         nodes = list(range(1, m + 1))
 
@@ -66,7 +66,7 @@ class SPTMMountainCar(object):
 
         def __helper__(nodes, current_parent, next_parents, rollout, denv):
             if nodes:
-                for action in [0, 1, 2]:
+                for action in [0, 1, 2, 3, 4, 5, 6]:
                     denv_ = copy_env(denv)
                     denv_.env.rotation = rotation
                     denv_.step(action)
@@ -100,9 +100,9 @@ class SPTMMountainCar(object):
         return rollout
 
     def dream_forward(self, dream_env):
-        dream_env.render()
+
         for _ in range(STEP):
-            rollout = self.predict_rollout_head(5, dream_env)
+            rollout = self.predict_rollout_head(3, dream_env)
             tree_x = []
             tree_y = []
             min_dist = MIN
@@ -114,6 +114,7 @@ class SPTMMountainCar(object):
                 # if it's not a leaf and it's not the root
                 if rollout.succ[node] and node > 1:
                     position = rollout.nodes[node]['position']
+                    prefer_full = 1.
 
                     # LOSS-1: get the closest point for this node
                     for point in self.line:
@@ -133,8 +134,11 @@ class SPTMMountainCar(object):
                         if dist_shift < min_shift:
                             min_shift = dist_shift
 
-                    # the node that has the min pair is the best node
-                    pair = (min_dist + min_shift)
+                    if rollout.nodes[node]['action_sequence'][0] == 0:
+                        prefer_full = 0.85
+
+                    # the node that has the min LOSS-1 + LOSS-2 is the best node
+                    pair = (min_dist + min_shift) * prefer_full
                     if pair < min_pair:
                         min_pair = pair
                         best_node = node
@@ -158,14 +162,15 @@ class SPTMMountainCar(object):
 
 
 if __name__ == '__main__':
-    mc = SPTMMountainCar("./episodes_keyboard/")
+    mc = SPTMMountainCar("./tracks/", 1439)
     env = gym.make("MountainCar-v0")
     env.reset()
     dream_env = gym.make("MountainCar-v0")
     dream_env.reset()
 
     # Setting starting position (debugging)
-    dream_env.env.state[0] = np.array([0.08078343769427906, 0.8791929653015608])
+    dream_env.env.state[0] = np.array([1.5, 0.8])
+    dream_env.env.rotation = 0
     # print("starting position: ", dream_env.state[0])
 
     mc.dream_forward(dream_env)
